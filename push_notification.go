@@ -6,9 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"math/rand"
 	"strconv"
-	"time"
 )
 
 // Push commands always start with command value 2.
@@ -72,11 +70,19 @@ func NewAlertDictionary() *AlertDictionary {
 // PushNotification is the wrapper for the Payload.
 // The length fields are computed in ToBytes() and aren't represented here.
 type PushNotification struct {
-	Identifier  int32
+	Identifier  uint32
 	Expiry      uint32
 	DeviceToken string
 	payload     map[string]interface{}
 	Priority    uint8
+}
+
+var currentIdentifier uint32 = 0
+
+func nextIdentifier() uint32 {
+	v := currentIdentifier
+	currentIdentifier++
+	return v
 }
 
 // NewPushNotification creates and returns a PushNotification structure.
@@ -84,7 +90,7 @@ type PushNotification struct {
 func NewPushNotification() (pn *PushNotification) {
 	pn = new(PushNotification)
 	pn.payload = make(map[string]interface{})
-	pn.Identifier = rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(IdentifierUbound)
+	pn.Identifier = nextIdentifier()
 	pn.Priority = 10
 	return
 }

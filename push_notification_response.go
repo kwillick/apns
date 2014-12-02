@@ -7,17 +7,17 @@ const TimeoutSeconds = 5
 // This enumerates the response codes that Apple defines
 // for push notification attempts.
 var ApplePushResponses = map[uint8]string{
-	0:   "NO_ERRORS",
-	1:   "PROCESSING_ERROR",
-	2:   "MISSING_DEVICE_TOKEN",
-	3:   "MISSING_TOPIC",
-	4:   "MISSING_PAYLOAD",
-	5:   "INVALID_TOKEN_SIZE",
-	6:   "INVALID_TOPIC_SIZE",
-	7:   "INVALID_PAYLOAD_SIZE",
-	8:   "INVALID_TOKEN",
-	10:  "SHUTDOWN",
-	255: "UNKNOWN",
+	0:   "No errors",
+	1:   "Processing error",
+	2:   "Missing device token",
+	3:   "Missing topic",
+	4:   "Missing payload",
+	5:   "Invalid token size",
+	6:   "Invalid topic size",
+	7:   "Invalid payload size",
+	8:   "Invalid token",
+	10:  "Shutdown",
+	255: "None (unknown)",
 }
 
 // PushNotificationResponse details what Apple had to say, if anything.
