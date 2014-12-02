@@ -304,9 +304,9 @@ func (c *Connection) SendNotification(deviceToken string, alert string, sound st
 
 		payload := &Payload{
 			Alert: alert,
-			Badge: badge,
 			Sound: sound,
 		}
+		payload.SetBadge(badge)
 		notification.AddPayload(payload)
 
 		for k, v := range extra {
