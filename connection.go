@@ -14,21 +14,25 @@ import (
 	"time"
 )
 
+// An endpoint to connect to.
 type Gateway struct {
 	Host string
 	Port string
 }
 
+// The production gateway
 var AppleProductionGateway = Gateway{
 	Host: "gateway.push.apple.com",
 	Port: "2195",
 }
 
+// The development gateway
 var AppleDevelopmentGateway = Gateway{
 	Host: "gateway.sandbox.push.apple.com",
 	Port: "2195",
 }
 
+// Used to commnunicate errors that occur when attempting to send a notification.
 type PushNotificationError struct {
 	Notification *PushNotification
 	err          error
@@ -38,6 +42,7 @@ func (p *PushNotificationError) Error() string {
 	return p.err.Error()
 }
 
+// Used to maintain a connection to the specified gateway.
 type Connection struct {
 	Gateway             string
 	tlsConfig           tls.Config
@@ -51,6 +56,10 @@ type Connection struct {
 	activeNotifications map[uint32]*PushNotification
 }
 
+// Create a new connection to gateway. Usually either AppleProductionGateway or
+// AppleDevelopmentGateway. The certificate file should be the one received from Apple that matches
+// the gateway. The key file is the private key used to create the certificate signing request
+// that was sent to Apple in order to get the certificate file.
 func NewConnection(gateway Gateway, certificateFile string, keyFile string) (*Connection, error) {
 	c := &Connection{
 		Gateway:             net.JoinHostPort(gateway.Host, gateway.Port),
@@ -72,7 +81,8 @@ func NewConnection(gateway Gateway, certificateFile string, keyFile string) (*Co
 	return c, nil
 }
 
-// This creates a TLS connection that only trusts certificates from the specified root CA
+// This creates a TLS connection that only trusts certificates from the specified root CA.
+// This is primarily here for testing purposes.
 func ConnectionWithRootCA(gateway Gateway, caRootCertFile, certFile, keyFile string) (*Connection, error) {
 	c := &Connection{
 		Gateway:             net.JoinHostPort(gateway.Host, gateway.Port),
