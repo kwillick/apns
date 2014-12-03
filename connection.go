@@ -178,8 +178,9 @@ func (c *Connection) responseListener() {
 
 		case io.EOF:
 			// The connection was closed. Apple closes the connection after sending us an error
-			// response. So reconnect before going back to reading.
-			if c.running {
+			// response. The connection could have also been closed by the idle timeout in
+			// notificationSender. Only reconnect if we are not in the idle state.
+			if c.running && !c.idle {
 				connectErr := c.tcpConnect()
 				if connectErr != nil {
 					// Instead of repeatedly attempting to renew, just send an error and close down
@@ -187,6 +188,8 @@ func (c *Connection) responseListener() {
 					c.errorChannel <- &PushNotificationError{nil, connectErr}
 					return
 				}
+			} else {
+				return
 			}
 
 		default:
@@ -308,7 +311,7 @@ func (c *Connection) Close() {
 	}
 }
 
-func (c *Connection) SendNotification(deviceToken string, alert string, sound string, badge int, extra map[string]interface{}) {
+func (c *Connection) SendBasicNotification(deviceToken string, alert string, sound string, badge int) {
 	go func() {
 		notification := NewPushNotification()
 
@@ -318,10 +321,6 @@ func (c *Connection) SendNotification(deviceToken string, alert string, sound st
 		}
 		payload.SetBadge(badge)
 		notification.AddPayload(payload)
-
-		for k, v := range extra {
-			notification.Set(k, v)
-		}
 		notification.DeviceToken = deviceToken
 
 		// If we are idle, then the connection needs to be reconnected
@@ -332,6 +331,28 @@ func (c *Connection) SendNotification(deviceToken string, alert string, sound st
 				return
 			}
 
+			c.idle = false
+			go c.responseListener()
+			go c.notificationSender()
+		}
+
+		c.notificationChannel <- notification
+	}()
+}
+
+func (c *Connection) SendNotification(notification *PushNotification) {
+	go func() {
+		// If we are idle, then the connection needs to be reconnected
+		if c.idle {
+			if connectErr := c.tcpConnect(); connectErr != nil {
+				c.Close()
+				c.errorChannel <- &PushNotificationError{nil, connectErr}
+				return
+			}
+
+			c.idle = false
+			go c.responseListener()
+			go c.notificationSender()
 		}
 
 		c.notificationChannel <- notification
