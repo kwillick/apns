@@ -129,6 +129,13 @@ func isErrorTimeout(err error) bool {
 	return ok && netErr.Timeout()
 }
 
+func isErrorClosedConnection(err error) bool {
+	if opErr, ok := err.(*net.OpError); ok {
+		return ok && opErr.Op == "read" && opErr.Err.Error() == "use of closed network connection"
+	}
+	return false
+}
+
 func (c *Connection) tcpConnect() error {
 	var err error
 	c.tlsConn, err = tls.Dial("tcp", c.Gateway, &c.tlsConfig)
@@ -194,11 +201,26 @@ func (c *Connection) responseListener() {
 
 		default:
 			// Check for a timeout. A timeout is not a failure.
-			if !isErrorTimeout(err) {
+			if !isErrorTimeout(err) && !isErrorClosedConnection(err) {
 				// Some other error that isn't recoverable.
 				c.Close()
 				c.errorChannel <- &PushNotificationError{nil, err}
 				return
+			} else if isErrorClosedConnection(err) {
+				// The connection was closed. Apple closes the connection after sending us an error
+				// response. The connection could have also been closed by the idle timeout in
+				// notificationSender. Only reconnect if we are not in the idle state.
+				if c.running && !c.idle {
+					connectErr := c.tcpConnect()
+					if connectErr != nil {
+						// Instead of repeatedly attempting to renew, just send an error and close down
+						c.Close()
+						c.errorChannel <- &PushNotificationError{nil, connectErr}
+						return
+					}
+				} else {
+					return
+				}
 			}
 		}
 	}
