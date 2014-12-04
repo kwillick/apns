@@ -36,7 +36,7 @@ func main() {
   }()
 
   fakeDeviceToken := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  connection.SendNotification(fakeDeviceToken, "Some alert text", "bingbong.aiff", 1, nil)
+  connection.SendBasicNotification(fakeDeviceToken, "Some alert text", "bingbong.aiff", 1, nil)
 
   // Sleep, since SendNotification doesn't block
   time.Sleep(time.Duration(2) * time.Second)
@@ -54,33 +54,14 @@ import (
 )
 
 func main() {
-  fmt.Println("- connecting to check for deactivated tokens (maximum read timeout =", apns.FeedbackTimeoutSeconds, "seconds)")
+  fmt.Println("- connecting to check for deactivated tokens")
 
-  client := apns.NewClient("feedback.sandbox.push.apple.com:2196", "YOUR_CERT_PEM", "YOUR_KEY_NOENC_PEM")
+  client := apns.NewFeedbackConnection(apns.AppleFeedbackDevelopmentGateway, "YOUR_CERT_FILE.pem", "YOUR_KEY_FILE.pem")
   go client.ListenForFeedback()
 
   for {
-    select {
-    case resp := <-apns.FeedbackChannel:
-      fmt.Println("- recv'd:", resp.DeviceToken)
-    case <-apns.ShutdownChannel:
-      fmt.Println("- nothing returned from the feedback service")
-      os.Exit(1)
-    }
+    resp := <-apns.FeedbackChannel
+    fmt.Println("- recv'd:", resp.DeviceToken)
   }
 }
-```
-
-#### Returns
-```shell
-- connecting to check for deactivated tokens (maximum read timeout = 5 seconds)
-- nothing returned from the feedback service
-exit status 1
-```
-
-Your output will differ if the service returns device tokens.
-
-```shell
-- recv'd: DEVICE_TOKEN_HERE
-...etc.
 ```
