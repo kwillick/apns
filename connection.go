@@ -256,9 +256,13 @@ func (c *Connection) send(notification *PushNotification) bool {
 
 func (c *Connection) notificationSender() {
 	c.notificationChannel = make(chan *PushNotification, 1024)
-	idleTimeout := func(channel chan<- bool) {
+	idleTimeout := func() {
 		time.Sleep(time.Duration(30) * time.Minute)
-		channel <- true
+		if c.idleTimeoutChannel != nil {
+			c.idleTimeoutChannel <- true
+			close(c.idleTimeoutChannel)
+			c.idleTimeoutChannel = nil
+		}
 	}
 
 	var sentSinceIdleCheck uint32 = 0
@@ -267,8 +271,10 @@ func (c *Connection) notificationSender() {
 			return
 		}
 
-		c.idleTimeoutChannel = make(chan bool)
-		go idleTimeout(c.idleTimeoutChannel)
+		if c.idleTimeoutChannel == nil {
+			c.idleTimeoutChannel = make(chan bool)
+			go idleTimeout()
+		}
 
 		select {
 		case notification, ok := <-c.notificationChannel:
